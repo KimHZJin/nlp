@@ -27,15 +27,51 @@ class T5Dataset(Dataset):
             * Class behavior should be different on the test set.
         '''
         # TODO
+        self.split = split
+        self.tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+        self.data = self.process_data(data_folder, split, self.tokenizer)
+
 
     def process_data(self, data_folder, split, tokenizer):
         # TODO
+        nl_path = os.path.join(data_folder, f'{split}.nl')
+        nl_queries = load_lines(nl_path)
+        
+        data = []
+        
+        # For test set, we don't have SQL labels
+        if split == 'test':
+            for nl in nl_queries:
+                encoder_ids = tokenizer(nl, return_tensors='pt').input_ids.squeeze(0)
+                data.append({
+                    'encoder_ids': encoder_ids,
+                    'nl_query': nl
+                })
+        else:
+            # For train/dev, load SQL queries too
+            sql_path = os.path.join(data_folder, f'{split}.sql')
+            sql_queries = load_lines(sql_path)
+            
+            for nl, sql in zip(nl_queries, sql_queries):
+                encoder_ids = tokenizer(nl, return_tensors='pt').input_ids.squeeze(0)
+                decoder_ids = tokenizer(sql, return_tensors='pt').input_ids.squeeze(0)
+                
+                data.append({
+                    'encoder_ids': encoder_ids,
+                    'decoder_ids': decoder_ids,
+                    'nl_query': nl,
+                    'sql_query': sql
+                })
+        
+        return data
     
     def __len__(self):
         # TODO
+        return len(self.data)
 
     def __getitem__(self, idx):
         # TODO
+        return self.data[idx]
 
 def normal_collate_fn(batch):
     '''
@@ -54,7 +90,27 @@ def normal_collate_fn(batch):
         * initial_decoder_inputs: The very first input token to be decoder (only to be used in evaluation)
     '''
     # TODO
-    return [], [], [], [], []
+    # TODO
+    encoder_ids = [item['encoder_ids'] for item in batch]
+    decoder_ids = [item['decoder_ids'] for item in batch]
+    
+    # Pad encoder inputs
+    encoder_ids_padded = pad_sequence(encoder_ids, batch_first=True, padding_value=PAD_IDX)
+    encoder_mask = (encoder_ids_padded != PAD_IDX).long()
+    
+    # Pad decoder inputs and targets
+    decoder_ids_padded = pad_sequence(decoder_ids, batch_first=True, padding_value=PAD_IDX)
+    
+    # Decoder inputs: all tokens except the last one
+    decoder_inputs = decoder_ids_padded[:, :-1]
+    # Decoder targets: all tokens except the first one
+    decoder_targets = decoder_ids_padded[:, 1:]
+    
+    # Initial decoder input (first token of each sequence)
+    initial_decoder_inputs = decoder_ids_padded[:, 0]
+    
+    return encoder_ids_padded, encoder_mask, decoder_inputs, decoder_targets, initial_decoder_inputs
+    # return [], [], [], [], []
 
 def test_collate_fn(batch):
     '''
@@ -70,7 +126,20 @@ def test_collate_fn(batch):
         * initial_decoder_inputs: The very first input token to be decoder (only to be used in evaluation)
     '''
     # TODO
-    return [], [], []
+    encoder_ids = [item['encoder_ids'] for item in batch]
+    
+    # Pad encoder inputs
+    encoder_ids_padded = pad_sequence(encoder_ids, batch_first=True, padding_value=PAD_IDX)
+    encoder_mask = (encoder_ids_padded != PAD_IDX).long()
+    
+    # For test, we need a decoder start token (using extra_id_0 as BOS)
+    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+    bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
+    initial_decoder_inputs = torch.tensor([bos_token_id] * len(batch))
+    
+    return encoder_ids_padded, encoder_mask, initial_decoder_inputs
+
+    # return [], [], []
 
 def get_dataloader(batch_size, split):
     data_folder = 'data'
@@ -97,4 +166,9 @@ def load_lines(path):
 
 def load_prompting_data(data_folder):
     # TODO
+    train_x = load_lines(os.path.join(data_folder, 'train.nl'))
+    train_y = load_lines(os.path.join(data_folder, 'train.sql'))
+    dev_x = load_lines(os.path.join(data_folder, 'dev.nl'))
+    dev_y = load_lines(os.path.join(data_folder, 'dev.sql'))
+    test_x = load_lines(os.path.join(data_folder, 'test.nl'))
     return train_x, train_y, dev_x, dev_y, test_x
