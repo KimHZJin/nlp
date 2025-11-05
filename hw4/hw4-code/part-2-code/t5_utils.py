@@ -20,7 +20,16 @@ def initialize_model(args):
     or training a T5 model initialized with the 'google-t5/t5-small' config
     from scratch.
     '''
-    pass
+    if args.finetune:
+        # Fine-tune pretrained T5
+        model = T5ForConditionalGeneration.from_pretrained('google-t5/t5-small')
+    else:
+        # Train from scratch with T5 config
+        config = T5Config.from_pretrained('google-t5/t5-small')
+        model = T5ForConditionalGeneration(config)
+    
+    model.to(DEVICE)
+    return model
 
 def mkdir(dirpath):
     if not os.path.exists(dirpath):
@@ -31,11 +40,22 @@ def mkdir(dirpath):
 
 def save_model(checkpoint_dir, model, best):
     # Save model checkpoint to be able to load the model later
-    pass
+    mkdir(checkpoint_dir)
+    if best:
+        save_path = os.path.join(checkpoint_dir, 'best_model.pt')
+    else:
+        save_path = os.path.join(checkpoint_dir, 'last_model.pt')
+    torch.save(model.state_dict(), save_path)
 
 def load_model_from_checkpoint(args, best):
     # Load model from a checkpoint
-    pass
+    model = initialize_model(args)
+    if best:
+        checkpoint_path = os.path.join(args.checkpoint_dir, 'best_model.pt')
+    else:
+        checkpoint_path = os.path.join(args.checkpoint_dir, 'last_model.pt')
+    model.load_state_dict(torch.load(checkpoint_path))
+    return model
 
 def initialize_optimizer_and_scheduler(args, model, epoch_length):
     optimizer = initialize_optimizer(args, model)
