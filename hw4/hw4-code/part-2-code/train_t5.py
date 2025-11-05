@@ -131,7 +131,7 @@ def train_epoch(args, model, train_loader, optimizer, scheduler):
 
     return total_loss / total_tokens
         
-def eval_epoch(args, model, dev_loader, gt_sql_pth, model_sql_path, gt_record_path, model_record_path):
+def eval_epoch(args, model, dev_loader, gt_sql_path, model_sql_path, gt_record_path, model_record_path):
     '''
     You must implement the evaluation loop to be using during training. We recommend keeping track
     of the model loss on the SQL queries, the metrics compute_metrics returns (save_queries_and_records should be helpful)
