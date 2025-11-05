@@ -59,7 +59,7 @@ def custom_transform(example):
     
     for word in words:
         # 20% chance to add typo to this word
-        if random.random() < 0.2 and len(word) > 2:
+        if random.random() < 0.4 and len(word) > 2:
             word_list = list(word)
             # Pick a random position (not first/last letter)
             if len(word_list) > 3:
