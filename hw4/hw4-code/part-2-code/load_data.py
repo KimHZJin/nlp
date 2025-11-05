@@ -42,7 +42,8 @@ class T5Dataset(Dataset):
         # For test set, we don't have SQL labels
         if split == 'test':
             for nl in nl_queries:
-                encoder_ids = tokenizer(nl, return_tensors='pt').input_ids.squeeze(0)
+                prefixed_nl = f"translate to SQL: {nl}"
+                encoder_ids = tokenizer(prefixed_nl, return_tensors='pt').input_ids.squeeze(0)
                 data.append({
                     'encoder_ids': encoder_ids,
                     'nl_query': nl
