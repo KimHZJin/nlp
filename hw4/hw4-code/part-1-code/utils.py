@@ -44,7 +44,35 @@ def custom_transform(example):
 
     # You should update example["text"] using your transformation
 
-    raise NotImplementedError
+    keyboard_neighbors = {
+        'a': 'qwsz', 'b': 'vghn', 'c': 'xdfv', 'd': 'sfcx', 'e': 'wsdr',
+        'f': 'dgvc', 'g': 'fhvb', 'h': 'gjbn', 'i': 'ujko', 'j': 'hkun',
+        'k': 'jlim', 'l': 'kop', 'm': 'njk', 'n': 'bhjm', 'o': 'iklp',
+        'p': 'ol', 'q': 'wa', 'r': 'edft', 's': 'wedxa', 't': 'rfgy',
+        'u': 'yhji', 'v': 'cfgb', 'w': 'qase', 'x': 'zsdc', 'y': 'tghu',
+        'z': 'asx'
+    }
+    
+    text = example["text"]
+    words = word_tokenize(text.lower())
+    transformed_words = []
+    
+    for word in words:
+        # 20% chance to add typo to this word
+        if random.random() < 0.2 and len(word) > 2:
+            word_list = list(word)
+            # Pick a random position (not first/last letter)
+            if len(word_list) > 3:
+                pos = random.randint(1, len(word_list) - 2)
+                char = word_list[pos]
+                # Replace with neighbor if available
+                if char in keyboard_neighbors:
+                    neighbor = random.choice(keyboard_neighbors[char])
+                    word_list[pos] = neighbor
+            word = ''.join(word_list)
+        transformed_words.append(word)
+    
+    example["text"] = TreebankWordDetokenizer().detokenize(transformed_words)
 
     ##### YOUR CODE ENDS HERE ######
 
