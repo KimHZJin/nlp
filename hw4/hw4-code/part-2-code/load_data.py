@@ -46,7 +46,7 @@ class T5Dataset(Dataset):
                 encoder_ids = tokenizer(prefixed_nl, return_tensors='pt').input_ids.squeeze(0)
                 data.append({
                     'encoder_ids': encoder_ids,
-                    'nl_query': nl
+                    'nl_query': prefixed_nl
                 })
         else:
             # For train/dev, load SQL queries too
@@ -61,7 +61,7 @@ class T5Dataset(Dataset):
                 data.append({
                     'encoder_ids': encoder_ids,
                     'decoder_ids': decoder_ids,
-                    'nl_query': nl,
+                    'nl_query': prefixed_nl,
                     'sql_query': sql
                 })
         
