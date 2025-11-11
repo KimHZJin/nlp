@@ -31,15 +31,13 @@ class T5Dataset(Dataset):
         self.tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
         self.data = self.process_data(data_folder, split, self.tokenizer)
 
-
     def process_data(self, data_folder, split, tokenizer):
-        # TODO
         nl_path = os.path.join(data_folder, f'{split}.nl')
         nl_queries = load_lines(nl_path)
-        
+    
         data = []
-        
-        # For test set, we don't have SQL labels
+        bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
+    
         if split == 'test':
             for nl in nl_queries:
                 prefixed_nl = f"translate English to SQL query: {nl}"
@@ -49,24 +47,27 @@ class T5Dataset(Dataset):
                     'nl_query': nl
                 })
         else:
-            # For train/dev, load SQL queries too
             sql_path = os.path.join(data_folder, f'{split}.sql')
             sql_queries = load_lines(sql_path)
-            
+        
             for nl, sql in zip(nl_queries, sql_queries):
                 prefixed_nl = f"translate English to SQL query: {nl}"
                 encoder_ids = tokenizer(prefixed_nl, return_tensors='pt').input_ids.squeeze(0)
                 decoder_ids = tokenizer(sql, return_tensors='pt').input_ids.squeeze(0)
-                
+            
+                # Prepend BOS token
+                decoder_ids = torch.cat([torch.tensor([bos_token_id]), decoder_ids])
+            
                 data.append({
                     'encoder_ids': encoder_ids,
                     'decoder_ids': decoder_ids,
                     'nl_query': nl,
                     'sql_query': sql
                 })
-        
-        return data
     
+        return data
+          
+
     def __len__(self):
         # TODO
         return len(self.data)
@@ -93,22 +94,26 @@ def normal_collate_fn(batch):
     '''
     # TODO
     # TODO
+    from transformers import T5TokenizerFast
+    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+    bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
+    
     encoder_ids = [item['encoder_ids'] for item in batch]
     decoder_ids = [item['decoder_ids'] for item in batch]
     
-    # Pad encoder inputs
+    # Pad sequences
     encoder_ids_padded = pad_sequence(encoder_ids, batch_first=True, padding_value=PAD_IDX)
     encoder_mask = (encoder_ids_padded != PAD_IDX).long()
     
-    # Pad decoder inputs and targets
     decoder_ids_padded = pad_sequence(decoder_ids, batch_first=True, padding_value=PAD_IDX)
     
-    # Decoder inputs: all tokens except the last one
+    # Decoder inputs: everything except last token (already has BOS prepended)
     decoder_inputs = decoder_ids_padded[:, :-1]
-    # Decoder targets: all tokens except the first one
+    
+    # Decoder targets: everything except first token (the BOS)
     decoder_targets = decoder_ids_padded[:, 1:]
     
-    # Initial decoder input (first token of each sequence)
+    # Initial decoder input (BOS token)
     initial_decoder_inputs = decoder_ids_padded[:, 0]
     
     return encoder_ids_padded, encoder_mask, decoder_inputs, decoder_targets, initial_decoder_inputs
@@ -128,15 +133,15 @@ def test_collate_fn(batch):
         * initial_decoder_inputs: The very first input token to be decoder (only to be used in evaluation)
     '''
     # TODO
+    from transformers import T5TokenizerFast
+    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+    bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
+    
     encoder_ids = [item['encoder_ids'] for item in batch]
     
-    # Pad encoder inputs
     encoder_ids_padded = pad_sequence(encoder_ids, batch_first=True, padding_value=PAD_IDX)
     encoder_mask = (encoder_ids_padded != PAD_IDX).long()
     
-    # For test, we need a decoder start token (using extra_id_0 as BOS)
-    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
-    bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
     initial_decoder_inputs = torch.tensor([bos_token_id] * len(batch))
     
     return encoder_ids_padded, encoder_mask, initial_decoder_inputs
