@@ -12,6 +12,8 @@ from transformers import T5TokenizerFast
 import torch
 
 PAD_IDX = 0
+TOKENIZER = T5TokenizerFast.from_pretrained('google-t5/t5-small')  # ADD THIS
+BOS_TOKEN_ID = TOKENIZER.convert_tokens_to_ids('<extra_id_0>')    # ADD THIS
 
 class T5Dataset(Dataset):
 
@@ -94,9 +96,6 @@ def normal_collate_fn(batch):
     '''
     # TODO
     # TODO
-    from transformers import T5TokenizerFast
-    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
-    bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
     
     encoder_ids = [item['encoder_ids'] for item in batch]
     decoder_ids = [item['decoder_ids'] for item in batch]
@@ -133,16 +132,13 @@ def test_collate_fn(batch):
         * initial_decoder_inputs: The very first input token to be decoder (only to be used in evaluation)
     '''
     # TODO
-    from transformers import T5TokenizerFast
-    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
-    bos_token_id = tokenizer.convert_tokens_to_ids('<extra_id_0>')
     
     encoder_ids = [item['encoder_ids'] for item in batch]
     
     encoder_ids_padded = pad_sequence(encoder_ids, batch_first=True, padding_value=PAD_IDX)
     encoder_mask = (encoder_ids_padded != PAD_IDX).long()
     
-    initial_decoder_inputs = torch.tensor([bos_token_id] * len(batch))
+    initial_decoder_inputs = torch.tensor([BOS_TOKEN_ID] * len(batch))
     
     return encoder_ids_padded, encoder_mask, initial_decoder_inputs
 
