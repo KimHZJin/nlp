@@ -234,6 +234,16 @@ def test_inference(args, model, test_loader, model_sql_path, model_record_path):
     save_queries_and_records(all_generated_queries, model_sql_path, model_record_path)
 
 def main():
+    args = get_args()
+    
+    # CRITICAL DEBUG
+    print("="*50)
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    print(f"Device: {DEVICE}")
+    if torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print("="*50)
+    
     # Get key arguments
     args = get_args()
     if args.use_wandb:
