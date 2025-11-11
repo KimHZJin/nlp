@@ -43,6 +43,7 @@ def get_args():
                         help="If set, we will use wandb to keep track of experiments")
     parser.add_argument('--experiment_name', type=str, default='experiment',
                         help="How should we name this experiment?")
+    parser.add_argument('--resume', action='store_true', help='Resume from checkpoint if available')
 
     # Data hyperparameters
     parser.add_argument('--batch_size', type=int, default=16)
@@ -54,11 +55,26 @@ def get_args():
 def train(args, model, train_loader, dev_loader, optimizer, scheduler):
     best_f1 = -1
     epochs_since_improvement = 0
+    start_epoch = 0
 
     model_type = 'ft' if args.finetune else 'scr'
     checkpoint_dir = os.path.join('checkpoints', f'{model_type}_experiments', args.experiment_name)
     os.makedirs(checkpoint_dir, exist_ok=True)
     args.checkpoint_dir = checkpoint_dir
+
+    if args.resume:
+        checkpoint_path = os.path.join(checkpoint_dir, 'last_model.pt')
+        if os.path.exists(checkpoint_path):
+            print(f"Resuming from {checkpoint_path}")
+            model.load_state_dict(torch.load(checkpoint_path))
+            # Try to find last epoch from filenames
+            existing_files = os.listdir(checkpoint_dir)
+            if existing_files:
+                start_epoch = len([f for f in existing_files if 'epoch_' in f])
+            print(f"Starting from epoch {start_epoch}")
+        else:
+            print("No checkpoint found, starting from scratch")
+    
     experiment_name = 'ft_experiment'
     gt_sql_path = os.path.join(f'data/dev.sql')
     gt_record_path = os.path.join(f'records/ground_truth_dev.pkl')
