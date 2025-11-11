@@ -170,8 +170,6 @@ def eval_epoch(args, model, dev_loader, gt_sql_path, model_sql_path, gt_record_p
     
     all_generated_queries = []
     
-    from transformers import T5TokenizerFast
-    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
     
     with torch.no_grad():
         for encoder_input, encoder_mask, decoder_input, decoder_targets, initial_decoder_inputs in tqdm(dev_loader):
@@ -199,7 +197,7 @@ def eval_epoch(args, model, dev_loader, gt_sql_path, model_sql_path, gt_record_p
             generated = model.generate(
                 input_ids=encoder_input,
                 attention_mask=encoder_mask,
-                decoder_start_token_id=bos_token_id,
+                decoder_start_token_id=BOS_TOKEN_ID,
                 max_length=256,
                 num_beams=1
             )
@@ -233,8 +231,6 @@ def test_inference(args, model, test_loader, model_sql_path, model_record_path):
     model.eval()
     all_generated_queries = []
     
-    from transformers import T5TokenizerFast
-    tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
     
     with torch.no_grad():
         for encoder_input, encoder_mask, initial_decoder_inputs in tqdm(test_loader):
@@ -245,12 +241,13 @@ def test_inference(args, model, test_loader, model_sql_path, model_record_path):
             generated = model.generate(
                 input_ids=encoder_input,
                 attention_mask=encoder_mask,
-                max_length=128
+                decoder_start_token_id=BOS_TOKEN_ID, 
+                max_length=256  
             )
             
             # Decode generated queries
             for gen in generated:
-                query = tokenizer.decode(gen, skip_special_tokens=True)
+                query = TOKENIZER.decode(gen, skip_special_tokens=True)  
                 all_generated_queries.append(query)
     
     # Save queries and records
