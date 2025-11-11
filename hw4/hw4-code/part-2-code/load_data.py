@@ -42,11 +42,10 @@ class T5Dataset(Dataset):
         # For test set, we don't have SQL labels
         if split == 'test':
             for nl in nl_queries:
-                prefixed_nl = f"translate to SQL: {nl}"
                 encoder_ids = tokenizer(prefixed_nl, return_tensors='pt').input_ids.squeeze(0)
                 data.append({
                     'encoder_ids': encoder_ids,
-                    'nl_query': prefixed_nl
+                    'nl_query': nl
                 })
         else:
             # For train/dev, load SQL queries too
@@ -54,14 +53,13 @@ class T5Dataset(Dataset):
             sql_queries = load_lines(sql_path)
             
             for nl, sql in zip(nl_queries, sql_queries):
-                prefixed_nl = f"translate to SQL: {nl}"
                 encoder_ids = tokenizer(prefixed_nl, return_tensors='pt').input_ids.squeeze(0)
                 decoder_ids = tokenizer(sql, return_tensors='pt').input_ids.squeeze(0)
                 
                 data.append({
                     'encoder_ids': encoder_ids,
                     'decoder_ids': decoder_ids,
-                    'nl_query': prefixed_nl,
+                    'nl_query': nl,
                     'sql_query': sql
                 })
         
