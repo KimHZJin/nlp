@@ -12,6 +12,10 @@ from transformers import GenerationConfig
 from load_data import load_t5_data
 from utils import compute_metrics, save_queries_and_records
 
+from transformers import T5TokenizerFast
+TOKENIZER = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+BOS_TOKEN_ID = TOKENIZER.convert_tokens_to_ids('<extra_id_0>')
+
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 PAD_IDX = 0
 
@@ -191,15 +195,18 @@ def eval_epoch(args, model, dev_loader, gt_sql_path, model_sql_path, gt_record_p
             total_tokens += num_tokens
             
             # Generate SQL queries
+            
             generated = model.generate(
                 input_ids=encoder_input,
                 attention_mask=encoder_mask,
-                max_length=128
+                decoder_start_token_id=bos_token_id,
+                max_length=256,
+                num_beams=1
             )
             
             # Decode generated queries
             for gen in generated:
-                query = tokenizer.decode(gen, skip_special_tokens=True)
+                query = TOKENIZER.decode(gen, skip_special_tokens=True)  
                 all_generated_queries.append(query)
     
     # Save queries and records
