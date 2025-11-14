@@ -2,9 +2,13 @@ from train_t5 import *
 
 args = get_args()
 args.finetune = True
-args.experiment_name = 'verified'  # Changed from 'improved'
+args.experiment_name = 'verified'
 args.batch_size = 16
 args.test_batch_size = 16
+
+# Set checkpoint_dir manually
+model_type = 'ft' if args.finetune else 'scr'
+args.checkpoint_dir = os.path.join('checkpoints', f'{model_type}_experiments', args.experiment_name)
 
 # Load test data
 _, _, test_loader = load_t5_data(args.batch_size, args.test_batch_size)
