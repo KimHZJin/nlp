@@ -1,26 +1,21 @@
-import difflib
+import re
 
 pred = open('results/t5_ft_ft_experiment_dev.sql').readlines()
 gold = open('data/dev.sql').readlines()
 nl = open('data/dev.nl').readlines()
 
-errors = []
-for i in range(len(pred)):
-    # Normalize whitespace
-    p = ' '.join(pred[i].split())
-    g = ' '.join(gold[i].split())
-    
-    if p != g:
-        errors.append({
-            'idx': i,
-            'nl': nl[i].strip(),
-            'gold': g[:150],  # First 150 chars
-            'pred': p[:150]
-        })
+def normalize(sql):
+    # Remove whitespace differences
+    return re.sub(r'\s+', ' ', sql).strip()
 
-# Show first 10 errors
-for err in errors[:10]:
-    print(f"\n=== Error {err['idx']} ===")
-    print(f"NL: {err['nl']}")
-    print(f"GOLD: {err['gold']}")
-    print(f"PRED: {err['pred']}")
+real_errors = []
+for i in range(len(pred)):
+    if normalize(pred[i]) != normalize(gold[i]):
+        real_errors.append((i, nl[i].strip(), gold[i].strip()[:200], pred[i].strip()[:200]))
+
+print(f"Total real errors: {len(real_errors)}/{len(pred)}")
+for idx, n, g, p in real_errors[:5]:
+    print(f"\n=== Error {idx} ===")
+    print(f"NL: {n}")
+    print(f"GOLD: {g}")
+    print(f"PRED: {p}")
